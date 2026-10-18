@@ -28,7 +28,7 @@ Al hacer clic se abre esto:
 Modelo:   [Fable] [ Opus ] [Sonnet] [Haiku]
 Versión:  [Opus · último $4/$20] [Opus · 1M contexto $4/$20] [Opus Plan $4/$20 → $2/$10] [ Opus 5.5 $4/$20 ]
           precio API en USD por millón de tokens: entrada/salida
-Esfuerzo: [Bajo] [Medio] [ Alto ] [Muy alto] [Máximo]   ✕ cerrar
+Esfuerzo: [Auto] [Bajo] [Medio] [ Alto ] [Muy alto] [Máximo]   ✕ cerrar
 ```
 
 Las versiones salen del menú `/config` de tu cuenta, así que ves las que tu plan permite. El precio al lado de cada una es el de lista de la API. Con suscripción no pagas por token, pero sirve para comparar: Fable 5.1 gasta unas dos veces y media lo que Opus 5.5, y Haiku casi nada.
@@ -37,7 +37,7 @@ Los precios los escribí a mano en `plugins/selector-modelo/hooks/register.tsx` 
 
 Para que los clics funcionen en la terminal necesitas el modo de pantalla completa (`"tui": "fullscreen"` en tu `settings.json`). Sin mouse, `ctrl+x` y luego `tab` te lleva a los botones.
 
-El botón de esfuerzo hace lo mismo que escribir `/effort <nivel>`. Si tu sesión tiene el esfuerzo en `auto`, Claude Code puede responder "Kept effort level as auto" y no cambiarlo; eso pasa igual con el comando escrito a mano.
+El esfuerzo no pasa por `/effort`. En algunas versiones ese comando responde "Kept effort level as auto" y no cambia nada, así que el mod pone el nivel que elegiste en cada petición al modelo. Se aplica desde la siguiente respuesta y se recuerda entre sesiones. Con Auto vuelves a dejar que Claude Code decida. Los subagentes siguen con su propio esfuerzo, y en un modelo que no usa niveles de esfuerzo el botón no hace nada.
 
 ## Instalación
 

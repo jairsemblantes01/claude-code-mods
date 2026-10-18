@@ -8,6 +8,8 @@ const effort = atom({ plugin: 'selector-modelo', key: 'effort' } as const, null)
 const isOpen = atom({ plugin: 'selector-modelo', key: 'isOpen' } as const, false)
 const family = atom({ plugin: 'selector-modelo', key: 'family' } as const, null)
 const choices = atom({ plugin: 'selector-modelo', key: 'choices' } as const, [])
+// Esfuerzo que eligió la persona; null = el que decida Claude Code (auto)
+const chosenEffort = atom({ plugin: 'selector-modelo', key: 'chosenEffort' } as const, null)
 
 export const FAMILIES = [
   { alias: 'fable', label: 'Fable' },
@@ -157,19 +159,35 @@ async function chooseModel ($: EngineInterface, choice: ModelChoice) {
   }
 }
 
-async function chooseEffort ($: EngineInterface, level: Effort) {
+export function isEffort (value: unknown): value is Effort {
+  return typeof value === 'string' && (EFFORTS as string[]).includes(value)
+}
+
+// /effort <nivel> no aplica el nivel en todas las versiones ("Kept effort level as auto"),
+// así que el nivel elegido se pone en cada petición del hilo principal (turn.step)
+async function chooseEffort ($: EngineInterface, level: Effort | null) {
+  await update($, chosenEffort, () => level)
+  if (level) await update($, effort, () => level)
   try {
-    await $.command.run({ command: 'effort', args: level })
-    await update($, effort, () => level)
-  } catch {
-    $.ui.toast(`No se pudo cambiar el esfuerzo a ${EFFORT_LABELS[level]}`)
-  }
+    await (level ? $.store.set('effort', level) : $.store.delete('effort'))
+  } catch {}
+  $.ui.toast(level
+    ? `Esfuerzo ${EFFORT_LABELS[level]} desde la próxima respuesta`
+    : 'Esfuerzo automático desde la próxima respuesta')
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     await loadChoices($)
+    // El esfuerzo elegido se mantiene entre sesiones
+    try {
+      const saved = await $.store.get('effort')
+      if (isEffort(saved)) {
+        await update($, chosenEffort, () => saved)
+        await update($, effort, () => saved)
+      }
+    } catch {}
     return result
   })
 
@@ -182,7 +200,13 @@ export const register: Register = on => {
       await update($, choices, list =>
         list.some(c => c.value === id) || !familyOf(id) ? list : toChoices([...list.map(c => c.value), id]),
       )
-      if (typeof e.effort === 'string') {
+      const wanted = await read($, chosenEffort)
+      // Un modelo sin esfuerzo (e.effort ausente) se deja como está
+      if (wanted && e.effort !== undefined && e.effort !== wanted) {
+        await update($, effort, () => wanted)
+        return yield* next({ ...e, effort: wanted })
+      }
+      if (isEffort(e.effort)) {
         const level = e.effort
         await update($, effort, () => level)
       }
@@ -196,12 +220,13 @@ export const register: Register = on => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const current = await read($, model)
     const level = await read($, effort)
+    const wanted = await read($, chosenEffort)
     const open = await read($, isOpen)
     const list = await read($, choices)
     const currentFamily = familyOf(current)
     const shownFamily = (await read($, family)) ?? currentFamily
     const modelLabel = current ? prettyName(current) : '—'
-    const effortLabel = level ? EFFORT_LABELS[level] : '—'
+    const effortLabel = (level ? EFFORT_LABELS[level] : '—') + (wanted ? '' : ' (auto)')
 
     if (!open) {
       return (
@@ -251,12 +276,19 @@ export const register: Register = on => {
         )}
         <Box flexWrap="wrap">
           <Text dimColor>Esfuerzo: </Text>
+          <Button
+            key="effort-auto"
+            label="Auto"
+            variant={wanted === null ? 'primary' : undefined}
+            dimColor={wanted !== null}
+            onPress={() => chooseEffort($, null)}
+          />
           {EFFORTS.map(l => (
             <Button
               key={`effort-${l}`}
               label={EFFORT_LABELS[l]}
-              variant={l === level ? 'primary' : undefined}
-              dimColor={l !== level}
+              variant={l === wanted ? 'primary' : undefined}
+              dimColor={l !== wanted}
               onPress={() => chooseEffort($, l)}
             />
           ))}

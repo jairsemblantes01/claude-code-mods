@@ -11,6 +11,7 @@ declare module 'claude-code' {
       isOpen: boolean
       family: string | null
       choices: ModelChoice[]
+      chosenEffort: Effort | null
     }
   }
 }
