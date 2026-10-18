@@ -1,0 +1,1 @@
+{ "name": "selector-modelo", "version": "0.1.0", "description": "Botones sobre el prompt para cambiar el modelo y el esfuerzo con clics", "types": "./types/index.d.ts" }

@@ -1,0 +1,8 @@
+{
+  "name": "claude-code-mods",
+  "owner": { "name": "Jair Semblantes" },
+  "plugins": [
+    { "name": "limites-uso", "source": "./plugins/limites-uso", "description": "Uso restante de la suscripción (5 h y semanal) y hora del próximo reinicio" },
+    { "name": "selector-modelo", "source": "./plugins/selector-modelo", "description": "Botones sobre el prompt para cambiar modelo, versión y esfuerzo, con precios" }
+  ]
+}
