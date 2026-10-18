@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>claude-code-mods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@500;600;700;800&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14120f;
+    --panel: #1d1a16;
+    --term: #0f0e0c;
+    --line: #2e2a24;
+    --text: #f2ede4;
+    --muted: #9a9286;
+    --dim: #5f594f;
+    --accent: #e0805a;
+    --ok: #8fc79a;
+    --warn: #e8c46a;
+    --link: #7fb4e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1350px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter Tight", system-ui, sans-serif;
+    padding: 76px 72px 60px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  body::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(700px 500px at 100% 0%, rgba(224,128,90,.16), transparent 70%),
+      radial-gradient(600px 500px at 0% 100%, rgba(224,128,90,.07), transparent 70%);
+    pointer-events: none;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .kicker {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 22px; letter-spacing: .04em;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 80px; line-height: .98; font-weight: 800;
+    letter-spacing: -.035em;
+    margin-bottom: 24px;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .sub {
+    font-size: 29px; line-height: 1.35; color: var(--muted);
+    max-width: 900px; font-weight: 500;
+    margin-bottom: 48px;
+  }
+
+  .stage { position: relative; }
+  .term {
+    background: var(--term);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,.7);
+    overflow: hidden;
+  }
+  .bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .dot { width: 13px; height: 13px; border-radius: 50%; background: #3a352e; }
+  .bar span { margin-left: 12px; font-size: 18px; color: var(--dim); }
+  .body { padding: 28px 30px 30px; font-size: 21px; line-height: 1.6; }
+
+  .you { color: var(--dim); }
+  .you b { color: var(--muted); font-weight: 500; }
+  .reply { color: var(--text); margin-top: 14px; }
+  .reply .bullet { color: var(--accent); }
+  .link { color: var(--link); text-decoration: underline; text-underline-offset: 4px; position: relative; }
+
+  .spacer { height: 250px; }
+
+  .selector { color: var(--muted); margin-bottom: 12px; }
+  .selector b { color: var(--text); font-weight: 500; }
+  .prompt {
+    border: 1px solid #3a352e;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 12px;
+  }
+  .caret { display: inline-block; width: 11px; height: 24px; background: var(--text); vertical-align: -4px; margin-left: 2px; }
+  .lim { display: flex; gap: 14px; align-items: baseline; color: var(--muted); font-size: 19px; }
+  .meter .f { color: var(--ok); }
+  .meter.mid .f { color: var(--warn); }
+  .meter .e { color: #3a352e; }
+  .lim .pct { color: var(--text); font-weight: 700; }
+  .lim .sep { color: #3a352e; }
+
+  /* Puntero sobre el enlace */
+  .cursor {
+    position: absolute; left: 372px; top: 146px;
+    width: 30px; height: 30px; z-index: 3;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,.6));
+  }
+
+  /* La vista previa flotante */
+  .float {
+    position: absolute; left: 400px; top: 182px; z-index: 2;
+    width: 380px; height: 238px;
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 30px 60px -10px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.08);
+    background:
+      radial-gradient(90px 90px at 72% 34%, #ffd9a0 0%, #ffb36b 35%, rgba(255,140,90,0) 70%),
+      linear-gradient(180deg, #2b2350 0%, #7a3f6e 40%, #e0805a 72%, #f2b46b 100%);
+  }
+  .float .m1, .float .m2 {
+    position: absolute; left: -20px; right: -20px; bottom: 0;
+  }
+  .float .m1 { height: 120px; background: #3a2340; clip-path: polygon(0 100%, 0 55%, 14% 30%, 28% 52%, 44% 18%, 58% 46%, 72% 28%, 88% 50%, 100% 36%, 100% 100%); }
+  .float .m2 { height: 80px; background: #1c1424; clip-path: polygon(0 100%, 0 50%, 18% 34%, 34% 60%, 52% 30%, 70% 58%, 86% 40%, 100% 56%, 100% 100%); }
+  .float .x {
+    position: absolute; top: 10px; right: 10px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(20,18,15,.72); color: #fff;
+    display: grid; place-items: center;
+    font: 700 18px "Inter Tight", sans-serif;
+  }
+  .float .cap {
+    position: absolute; left: 12px; bottom: 10px;
+    font: 500 15px "JetBrains Mono", monospace; color: rgba(255,255,255,.85);
+    background: rgba(20,18,15,.55); padding: 3px 9px; border-radius: 6px;
+  }
+  .note {
+    position: absolute; left: 940px; top: 196px; z-index: 2;
+    width: 0;
+  }
+
+  .cards { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 16px; margin-top: 34px; }
+  .card {
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 20px; background: rgba(29,26,22,.6);
+  }
+  .card.new { border-color: rgba(224,128,90,.55); background: rgba(224,128,90,.07); }
+  .card .n { font: 700 19px "JetBrains Mono", monospace; color: var(--text); margin-bottom: 6px; display: flex; gap: 10px; align-items: center; }
+  .card .badge { font: 700 12px "Inter Tight", sans-serif; letter-spacing: .12em; color: var(--bg); background: var(--accent); padding: 3px 8px; border-radius: 999px; }
+  .card p { font-size: 18px; line-height: 1.35; color: var(--muted); font-weight: 500; }
+
+  footer {
+    margin-top: auto;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding-top: 30px;
+  }
+  .tags { display: flex; gap: 12px; }
+  .tag {
+    font-size: 19px; font-weight: 600; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 18px;
+  }
+  .repo { text-align: right; }
+  .repo .t { font-size: 17px; color: var(--dim); margin-bottom: 6px; }
+  .repo .u { font-size: 24px; color: var(--text); }
+</style>
+</head>
+<body>
+  <div class="kicker">// claude-code-mods · open source</div>
+  <h1>Tres plugins para<br><em>Claude Code</em></h1>
+  <p class="sub">Clic en un enlace a una imagen o un video y se abre la vista previa ahí mismo. Sin explorador de archivos ni navegador.</p>
+
+  <div class="stage">
+    <div class="term mono">
+      <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>~/proyectos — claude</span></div>
+      <div class="body">
+        <div class="you"><b>›</b> genera el banner para el post</div>
+        <div class="reply"><span class="bullet">●</span> Listo, lo guardé en <span class="link">banner.png</span></div>
+        <div class="spacer"></div>
+        <div class="selector">⚙ <b>Opus 5.5</b> · esfuerzo Alto</div>
+        <div class="prompt">› <span class="caret"></span></div>
+        <div class="lim">
+          <span>Sesión 5h</span>
+          <span class="meter"><span class="f">▰▰▰▰▰▰▰</span><span class="e">▱▱▱</span></span>
+          <span class="pct">70% libre</span>
+          <span class="sep">│</span>
+          <span>Semana</span>
+          <span class="meter mid"><span class="f">▰▰▰▰</span><span class="e">▱▱▱▱▱▱</span></span>
+          <span class="pct">37% libre</span>
+        </div>
+      </div>
+    </div>
+
+    <svg class="cursor" viewBox="0 0 24 24"><path d="M4 2 L4 20 L9 15.5 L12.5 22 L15.5 20.6 L12 14 L19 14 Z" fill="#fff" stroke="#14120f" stroke-width="1.4" stroke-linejoin="round"/></svg>
+
+    <div class="float">
+      <div class="m1"></div><div class="m2"></div>
+      <div class="x">✕</div>
+      <div class="cap">banner.png · 1200×750</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card new">
+      <div class="n">visor-medios <span class="badge">NUEVO</span></div>
+      <p>Imágenes y videos en una ventanita junto al clic, con ✕ para cerrarla.</p>
+    </div>
+    <div class="card">
+      <div class="n">selector-modelo</div>
+      <p>Modelo y esfuerzo con un clic, con precios.</p>
+    </div>
+    <div class="card">
+      <div class="n">limites-uso</div>
+      <p>Cuánto te queda y cuándo se reinicia.</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="tags"><span class="tag">TypeScript</span><span class="tag">Open source</span><span class="tag">1 comando</span></div>
+    <div class="repo mono">
+      <div class="t">github.com/</div>
+      <div class="u">jairsemblantes01/claude-code-mods</div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # claude-code-mods
 
-Dos mods para Claude Code que hice porque me cansé de escribir comandos para cosas que quería ver de un vistazo o cambiar con un clic.
+Tres mods para Claude Code que hice porque me cansé de escribir comandos para cosas que quería ver de un vistazo o cambiar con un clic.
 
 ## limites-uso
 
@@ -39,6 +39,28 @@ Para que los clics funcionen en la terminal necesitas el modo de pantalla comple
 
 El esfuerzo no pasa por `/effort`. En algunas versiones ese comando responde "Kept effort level as auto" y no cambia nada, así que el mod pone el nivel que elegiste en cada petición al modelo. Se aplica desde la siguiente respuesta y se recuerda entre sesiones. Con Auto vuelves a dejar que Claude Code decida. Los subagentes siguen con su propio esfuerzo, y en un modelo que no usa niveles de esfuerzo el botón no hace nada.
 
+## visor-medios
+
+Para ver una imagen o un video sin salir de Claude Code ni abrir el explorador de archivos:
+
+```
+/ver captura.png
+/ver ~/Videos/demo.mp4
+/ver                      # galería de la carpeta actual
+```
+
+Se abre una ventanita flotante sin bordes en la esquina inferior derecha de la pantalla, siempre encima, con la imagen o el video en su calidad real (480×360 como mucho) y un botón ✕ en su esquina para cerrarla. También la cierran `Esc` o `q`, y un video se cierra solo al terminar. Arrastrándola la mueves, y en un video un clic o espacio pausan. La ventana es un script pequeño de Python con GTK y GStreamer (`plugins/visor-medios/viewer/preview.py`), que Ubuntu con GNOME ya trae; donde falten, se usa `ffplay`, igual de flotante pero sin el botón.
+
+Donde no hay escritorio gráfico (por SSH, por ejemplo) se usa un panel dentro de la terminal que dibuja con bloques de colores (`▀`, dos píxeles por celda). Ahí la vista previa es de 64×16 celdas como mucho, pixeleada pero suficiente para reconocer qué es un archivo, y tiene botones para pausar, adelantar o atrasar 5 segundos, silenciar y pasar al archivo anterior o siguiente. Con el panel enfocado sirven las teclas `p`, `a`/`d`, `m`, `j`/`k`, `g` y `Esc`.
+
+Con `/ver` sobre una carpeta, la galería siempre es un panel en la terminal: das clic en un archivo y se abre la vista previa.
+
+También le puedes pedir a Claude "muéstrame la imagen que generaste" y la abre él, porque el mod le da una herramienta para eso.
+
+Si Claude escribe en su respuesta un enlace a una imagen o un video (`https://…/foto.jpg`, `file:///…/clip.mp4`), dale un clic y la vista previa se abre directo junto al puntero, sin tapar el enlace (con `/ver` o cuando la abre Claude, en la esquina inferior derecha). Los demás enlaces se abren como siempre, y ctrl+clic abre cualquiera en el navegador. `/ver` también acepta URLs. El tipo se reconoce por la extensión, así que un enlace sin `.jpg`, `.mp4` o similar no ofrece el visor.
+
+Necesita `ffmpeg` y `ffprobe`, y para la ventana Python 3 con GTK 3 y GStreamer (o, en su defecto, `ffplay`). La ventana se coloca con lo que dice `xrandr`; en Wayland funciona a través de XWayland, como en Ubuntu con GNOME.
+
 ## Instalación
 
 Dentro de Claude Code, en la terminal:
@@ -46,6 +68,7 @@ Dentro de Claude Code, en la terminal:
 ```
 /plugin install limites-uso --marketplace jairsemblantes01/claude-code-mods
 /plugin install selector-modelo --marketplace jairsemblantes01/claude-code-mods
+/plugin install visor-medios --marketplace jairsemblantes01/claude-code-mods
 ```
 
 La primera vez te pregunta si quieres agregar el marketplace: responde `y` y luego elige el alcance (con Enter queda para tu usuario).
@@ -55,6 +78,7 @@ Desde la shell también funciona:
 ```
 claude plugin install limites-uso --marketplace jairsemblantes01/claude-code-mods
 claude plugin install selector-modelo --marketplace jairsemblantes01/claude-code-mods
+claude plugin install visor-medios --marketplace jairsemblantes01/claude-code-mods
 ```
 
 En la app de escritorio no existe `/plugin`. Ahí es: el botón + junto al prompt, Plugins, Add marketplace con `jairsemblantes01/claude-code-mods`, y después Add plugin.

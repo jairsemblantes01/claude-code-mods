@@ -3,6 +3,7 @@
   "owner": { "name": "Jair Semblantes" },
   "plugins": [
     { "name": "limites-uso", "source": "./plugins/limites-uso", "description": "Uso restante de la suscripción (5 h y semanal) y hora del próximo reinicio" },
-    { "name": "selector-modelo", "source": "./plugins/selector-modelo", "description": "Botones sobre el prompt para cambiar modelo, versión y esfuerzo, con precios" }
+    { "name": "selector-modelo", "source": "./plugins/selector-modelo", "description": "Botones sobre el prompt para cambiar modelo, versión y esfuerzo, con precios" },
+    { "name": "visor-medios", "source": "./plugins/visor-medios", "description": "Ve imágenes y videos dentro de la terminal con /ver, sin abrir el explorador de archivos" }
   ]
 }
