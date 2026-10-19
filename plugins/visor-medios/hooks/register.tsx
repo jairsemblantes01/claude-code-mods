@@ -72,6 +72,12 @@ export function mediaLinks (text: string): string[] {
   return [...found].filter(href => linkKind(href) !== null).slice(0, 256)
 }
 
+// La ruta que pidió el modelo: los argumentos de la herramienta llegan junto al evento, no dentro de e.input
+export function toolPath (e: object): string {
+  const { ruta } = e as { ruta?: unknown }
+  return typeof ruta === 'string' ? ruta : '.'
+}
+
 const dirName = (path: string) => path.slice(0, Math.max(1, path.lastIndexOf('/')))
 
 // 75 -> "1:15"
@@ -628,9 +634,8 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'mcp__visor-medios__mostrar' }, async ($, e) => {
-    const input = e.input as { ruta?: unknown }
     try {
-      const text = await openPath($, typeof input.ruta === 'string' ? input.ruta : '.')
+      const text = await openPath($, toolPath(e))
       return { result: text, text }
     } catch (error) {
       return { deny: (error as Error).message }

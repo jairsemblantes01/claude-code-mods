@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { cleanPath, clock, fitSize, floatSize, fromBase64, kindOf, linkKind, mediaLinks, nameOf, packCells, parseProbe, primaryScreen, sizeLabel, toBase64 } from '../hooks/register'
+import { cleanPath, clock, fitSize, floatSize, fromBase64, kindOf, linkKind, mediaLinks, nameOf, packCells, parseProbe, primaryScreen, sizeLabel, toBase64, toolPath } from '../hooks/register'
 
 test('reconoce imágenes y videos por la extensión', async () => {
   expect(kindOf('foto.PNG')).toBe('imagen')
@@ -118,4 +118,10 @@ test('encuentra la pantalla principal en xrandr', async () => {
   expect(primaryScreen(xrandr)).toEqual({ width: 1920, height: 1080, x: 0, y: 0 })
   expect(primaryScreen('HDMI-1 connected 2560x1440+0+0 x')).toEqual({ width: 2560, height: 1440, x: 0, y: 0 })
   expect(primaryScreen('')).toBeNull()
+})
+
+test('la herramienta lee la ruta junto al evento', async () => {
+  expect(toolPath({ tool: 'mcp__visor-medios__mostrar', ruta: '/tmp/clip.mp4' })).toBe('/tmp/clip.mp4')
+  expect(toolPath({ tool: 'mcp__visor-medios__mostrar' })).toBe('.')
+  expect(toolPath({ ruta: 3 })).toBe('.')
 })
