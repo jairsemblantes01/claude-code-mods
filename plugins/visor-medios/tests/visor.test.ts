@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { cleanPath, clock, fitSize, floatSize, fromBase64, kindOf, linkKind, mediaLinks, nameOf, packCells, parseProbe, primaryScreen, sizeLabel, toBase64, toolPath } from '../hooks/register'
+import { cleanPath, clock, fileHref, fitSize, floatSize, fromBase64, kindOf, linkifyMedia, linkKind, mediaLinks, nameOf, packCells, parseProbe, pressable, primaryScreen, sizeLabel, toBase64, toolPath } from '../hooks/register'
 
 test('reconoce imágenes y videos por la extensión', async () => {
   expect(kindOf('foto.PNG')).toBe('imagen')
@@ -91,7 +91,8 @@ test('encuentra los enlaces a imágenes y videos de una respuesta', async () => 
   expect(nameOf('/home/ana/clip.mp4')).toBe('clip.mp4')
 })
 
-test('las respuestas con enlaces a medios se dibujan con esos enlaces clicables', async $ => {
+test('las respuestas con enlaces a medios se dibujan con esos enlaces clicables', async ($, on) => {
+  on('env.get', () => ({ value: '/home/ana' }))
   const ui = await $.ui.mount({
     plugin: 'visor-medios', surface: 'terminal', component: 'AssistantMessage',
     props: { text: 'Aquí está: https://x.com/a.png y https://x.com/docs', isFirstOfReply: true },
@@ -124,4 +125,41 @@ test('la herramienta lee la ruta junto al evento', async () => {
   expect(toolPath({ tool: 'mcp__visor-medios__mostrar', ruta: '/tmp/clip.mp4' })).toBe('/tmp/clip.mp4')
   expect(toolPath({ tool: 'mcp__visor-medios__mostrar' })).toBe('.')
   expect(toolPath({ ruta: 3 })).toBe('.')
+})
+
+test('las rutas locales a medios se vuelven enlaces file:// clicables', async () => {
+  const home = '/home/ana'
+  // Entre comillas invertidas, como las devuelve el modelo: conservan el estilo de código
+  expect(linkifyMedia('Imagen: `/home/ana/post/foto final.png`', home))
+    .toBe('Imagen: [`/home/ana/post/foto final.png`](file:///home/ana/post/foto%20final.png)')
+  // Sueltas, con ~ y con puntuación detrás
+  expect(linkifyMedia('Está en ~/clips/demo.mp4. Listo', home))
+    .toBe('Está en [~/clips/demo.mp4](file:///home/ana/clips/demo.mp4). Listo')
+  // Un enlace markdown a una ruta simple pasa a file://
+  expect(linkifyMedia('[la captura](/tmp/a#1.png)', home)).toBe('[la captura](file:///tmp/a%231.png)')
+  // Lo que ya es un enlace, otros archivos, rutas relativas y bloques de código no cambian
+  const same = [
+    '[web](https://x.com/a.png) y file:///tmp/b.png',
+    'el código en `/home/ana/app/main.ts` y `linkedin/post.png`',
+    '```\ncp /tmp/a.png /tmp/b.png\n```',
+  ].join('\n')
+  expect(linkifyMedia(same, home)).toBe(same)
+  expect(fileHref('relativa.png', home)).toBeNull()
+})
+
+test('los href clicables incluyen su forma normalizada', async () => {
+  expect(pressable(['file:///tmp/a%20b.png', 'https://x.com/a.png'])).toEqual(['file:///tmp/a%20b.png', 'https://x.com/a.png'])
+  expect(pressable(['https://X.com/a.png'])).toEqual(['https://X.com/a.png', 'https://x.com/a.png'])
+})
+
+test('una respuesta con una ruta entre comillas invertidas se dibuja con ella clicable', async ($, on) => {
+  on('env.get', () => ({ value: '/home/ana' }))
+  const ui = await $.ui.mount({
+    plugin: 'visor-medios', surface: 'terminal', component: 'AssistantMessage',
+    props: { text: 'Imagen: `/tmp/post-linkedin.png`', isFirstOfReply: true },
+  })
+  const node = await ui.find({ key: 'respuesta' })
+  expect(node?.props.pressableLinks).toEqual(['file:///tmp/post-linkedin.png'])
+  expect(node?.props.text).toBe('Imagen: [`/tmp/post-linkedin.png`](file:///tmp/post-linkedin.png)')
+  await ui.unmount()
 })

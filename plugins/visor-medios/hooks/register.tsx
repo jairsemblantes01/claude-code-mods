@@ -72,6 +72,56 @@ export function mediaLinks (text: string): string[] {
   return [...found].filter(href => linkKind(href) !== null).slice(0, 256)
 }
 
+const MEDIA_EXT = [...IMAGE_EXT, ...VIDEO_EXT].join('|')
+
+// Una ruta local a una imagen o un video: absoluta o con ~/, sin saltos de línea
+const isLocalMedia = (text: string) => /^(?:\/|~\/)[^\n`\]]*$/.test(text) && kindOf(text) !== null
+
+// El file:// de una ruta local, codificado para que la URL no se corte en espacios, # o ?
+export function fileHref (path: string, home: string | undefined): string | null {
+  const full = cleanPath(path, home)
+  if (!full.startsWith('/')) return null
+  return 'file://' + encodeURI(full).replace(/[#?]/g, c => encodeURIComponent(c))
+}
+
+// Un enlace markdown, un código en línea o una ruta suelta a un medio; en ese orden para que no se pisen
+const LINKIFY = new RegExp(
+  '(\\[[^\\]\\n]*\\]\\([^)\\n]*\\))|`([^`\\n]+)`|' +
+  `(^|[\\s>])((?:~/|/)[^\\s\`'"<>()[\\]]*\\.(?:${MEDIA_EXT}))(?=$|[\\s.,;:!?)])`,
+  'gim',
+)
+
+// Las rutas locales a medios que escribe el modelo no son enlaces (Markdown solo dibuja http, https y
+// file): se vuelven enlaces file:// para que un clic las abra. Los bloques de código quedan intactos.
+export function linkifyMedia (text: string, home: string | undefined): string {
+  return text.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/).map((part, i) => i % 2 === 1 ? part : part.replace(
+    LINKIFY,
+    (whole, link?: string, code?: string, lead?: string, path?: string) => {
+      if (link) {
+        const target = /\]\(\s*<?([^)>]*?)>?\s*\)$/.exec(link)?.[1] ?? ''
+        const href = isLocalMedia(target) ? fileHref(target, home) : null
+        return href ? link.slice(0, link.lastIndexOf('](')) + `](${href})` : whole
+      }
+      if (code) {
+        const href = isLocalMedia(code.trim()) ? fileHref(code.trim(), home) : null
+        return href ? `[\`${code}\`](${href})` : whole
+      }
+      const href = path ? fileHref(path, home) : null
+      return href ? `${lead}[${path}](${href})` : whole
+    },
+  )).join('')
+}
+
+// Los href clicables, también como los normaliza una URL: la superficie compara con el que dibujó
+export function pressable (links: string[]): string[] {
+  const all = new Set<string>()
+  for (const href of links) {
+    all.add(href)
+    try { all.add(new URL(href).href) } catch {}
+  }
+  return [...all].slice(0, 256)
+}
+
 // La ruta que pidió el modelo: los argumentos de la herramienta llegan junto al evento, no dentro de e.input
 export function toolPath (e: object): string {
   const { ruta } = e as { ruta?: unknown }
@@ -659,11 +709,12 @@ export const register: Register = on => {
   // los demás enlaces siguen abriéndose como siempre
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     if (e.surface !== 'terminal' || e.props.isSummary) return next(e)
-    const links = mediaLinks(e.props.text)
+    const text = linkifyMedia(e.props.text, await $.env.get('HOME'))
+    const links = mediaLinks(text)
     if (links.length === 0) return next(e)
     const { Markdown } = $.ui.resolve(e)
     return (
-      <Markdown key="respuesta" text={e.props.text} pressableLinks={links}
+      <Markdown key="respuesta" text={text} pressableLinks={pressable(links)}
         onLinkPress={link => void openLink($, link.href)} />
     )
   })
